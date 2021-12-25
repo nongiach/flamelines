@@ -34,6 +34,7 @@ struct ImplDemo {
 impl ImplDemo {
     fn new() -> Self {
         println!("We are in ImplDemo::new");
+        std::thread::sleep(std::time::Duration::from_secs(1));
         Self {
             name: "Robert".to_string(),
         }
