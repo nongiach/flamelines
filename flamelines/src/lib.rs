@@ -1,6 +1,12 @@
-use proc_macro::*;
+#![feature(proc_macro_span)]
+
+// use proc_macro2::*;
+use proc_macro::TokenStream;
 use quote::ToTokens;
+use syn::spanned::Spanned;
 use syn::{parse_quote, Stmt};
+
+extern crate proc_macro;
 
 // #printer(#entering_format, "", #(#arg_idents,)* depth = DEPTH.with(|d| d.get()));
 // #printer(#exiting_format, "", fn_return_value, depth = DEPTH.with(|d| d.get()));
@@ -8,6 +14,11 @@ type LineCallback = fn(&mut Stmt);
 
 fn wrap_line_with_instrumentation(original_line: &mut Stmt) {
     let original_line_to_string = quote::quote!(#original_line).to_string();
+    // let start = dbg!(original_line.span().unwrap().start());
+    let source_file = original_line.span().unwrap().source_file().path();
+    let source_file = source_file.to_str();
+    let line = original_line.span().unwrap().start().line;
+    let column = original_line.span().unwrap().start().column;
     *original_line = parse_quote! {{
             DEPTH.with(|d| d.set(d.get() + 1));
             let padding = DEPTH.with(|d| d.get());
@@ -16,7 +27,9 @@ fn wrap_line_with_instrumentation(original_line: &mut Stmt) {
             let fn_return_value = { #original_line };
             let elapsed_time = __flametime_before_execution.elapsed().as_millis();
             if elapsed_time > 50 {
-                println!("{} {} took {}ms for {}", " ".repeat(20), padding, elapsed_time, #original_line_to_string);
+                println!("{} {} {:?}:{}:{} took {}ms for {}",
+                    " ".repeat(20), padding, #source_file, #line, #column,
+                    elapsed_time, #original_line_to_string);
             }
             DEPTH.with(|d| d.set(d.get() - 1));
             fn_return_value
@@ -35,6 +48,7 @@ fn patch_impl(impl_item: &mut syn::ItemImpl, hook_callback: LineCallback) {
     })
 }
 
+// #[proc_macro_derive(TimeLines)]
 #[proc_macro_attribute]
 pub fn time_lines(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut item: syn::Item = syn::parse(input).unwrap();
