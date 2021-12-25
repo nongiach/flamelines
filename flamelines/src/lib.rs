@@ -1,73 +1,52 @@
 use proc_macro::*;
-use quote::quote;
+use quote::ToTokens;
 use syn::{parse_quote, Stmt};
 
 // #printer(#entering_format, "", #(#arg_idents,)* depth = DEPTH.with(|d| d.get()));
 // #printer(#exiting_format, "", fn_return_value, depth = DEPTH.with(|d| d.get()));
+type LineCallback = fn(&mut Stmt);
+
 fn wrap_line_with_instrumentation(original_line: &mut Stmt) {
-    // let entering_format = "Entering";
-    // let exiting_format = "Exiting";
+    let original_line_to_string = quote::quote!(#original_line).to_string();
     *original_line = parse_quote! {{
-        println!("start here {}", DEPTH.with(|d|d.get()));
-        DEPTH.with(|d| d.set(d.get() + 1));
-        // let mut fn_closure = move || #original_line;
-        // let fn_return_value = fn_closure();
-        let fn_return_value = dbg!({ #original_line });
-        DEPTH.with(|d| d.set(d.get() - 1)); // ICI
-        fn_return_value
+            DEPTH.with(|d| d.set(d.get() + 1));
+            let padding = DEPTH.with(|d| d.get());
+            let padding = " >".repeat(padding);
+            let __flametime_before_execution = std::time::Instant::now();
+            let fn_return_value = { #original_line };
+            let elapsed_time = __flametime_before_execution.elapsed().as_millis();
+            if elapsed_time > 50 {
+                println!("{} {} took {}ms for {}", " ".repeat(20), padding, elapsed_time, #original_line_to_string);
+            }
+            DEPTH.with(|d| d.set(d.get() - 1));
+            fn_return_value
     }}
 }
 
-fn insert_new_line_at_each_line(stmts: &mut Vec<Stmt>, line_wrapper_callback: fn(&mut Stmt)) {
-    stmts.iter_mut().map(line_wrapper_callback).collect::<()>();
-    // let mut new_stmts = Vec::new();
-    // for line in stmts.clone().into_iter() {
-    //     wrap_line_with_instrumentation()
-    //     new_stmts.push(line);
-    //     new_stmts.push(new_line.clone());
-    // }
-    // *stmts = new_stmts
+fn patch_block(stmts: &mut Vec<Stmt>, hook_callback: LineCallback) {
+    stmts.iter_mut().map(hook_callback).for_each(drop)
+}
+
+fn patch_impl(impl_item: &mut syn::ItemImpl, hook_callback: LineCallback) {
+    impl_item.items.iter_mut().for_each(|item| {
+        if let syn::ImplItem::Method(method_item) = item {
+            patch_block(&mut method_item.block.stmts, hook_callback)
+        }
+    })
 }
 
 #[proc_macro_attribute]
-pub fn counter(_args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn time_lines(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut item: syn::Item = syn::parse(input).unwrap();
-    let fn_item = match &mut item {
-        syn::Item::Fn(fn_item) => fn_item,
-        _ => panic!("expected fn"),
+    match &mut item {
+        syn::Item::Fn(fn_item) => {
+            patch_block(&mut fn_item.block.stmts, wrap_line_with_instrumentation);
+        }
+        syn::Item::Impl(ref mut impl_item) => {
+            patch_impl(impl_item, wrap_line_with_instrumentation);
+        }
+        _ => panic!("[-] flamelines expected fn"),
     };
-    println!("block size is => {}", fn_item.block.stmts.len());
-
-    // let first_line: Stmt = parse_quote! {{
-    //     fn print_line_and_time(__flameline_time: &mut std::time::Instant) {
-    //         let __flameline_elapsed_time = __flameline_time.elapsed();
-    //         println!("took {} seconds.", __flameline_elapsed_time.as_secs());
-    //         *__flameline_time = std::time::Instant::now();
-    //     }
-    //     let mut __flameline_time = std::time::Instant::now();
-    // }};
-
-    // let each_line: Stmt = parse_quote! {{
-    //     // print_line_and_time(&mut __flameline_time);
-    //     // println!("A");
-    //     // let __flameline_elapsed_time = __flameline_time.elapsed();
-    //     // __flameline_time = std::time::Instant::now();
-    // }};
-    // let each_line: Stmt = syn::parse(
-    //     quote!(
-    //         // println!("took {} seconds.", __flameline_time.elapsed().as_secs());
-    //         println!("took seconds.");
-    //         // let __flameline_time = std::time::Instant::now();
-    //     )
-    //     .into(),
-    // )
-    // .unwrap();
-
-    insert_new_line_at_each_line(&mut fn_item.block.stmts, wrap_line_with_instrumentation);
-    // fn_item.block.stmts.insert(0, first_line);
-    // fn_item.block.stmts.pop();
-
-    use quote::ToTokens;
     item.into_token_stream().into()
 }
 
