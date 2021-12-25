@@ -12,16 +12,18 @@ fn normal_func() -> i32 {
     let mut a = 4;
     a += 5;
     println!("4 {}", a);
-    child_func();
+    one_module::child_func();
     println!("5");
     42
 }
 
 #[flamelines::time_lines]
-fn child_func() -> i32 {
-    std::thread::sleep(std::time::Duration::from_secs(1));
-    println!("I'm the child func");
-    42
+mod one_module {
+    pub fn child_func() -> i32 {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        println!("I'm the child func");
+        42
+    }
 }
 
 #[flamelines::time_lines]
