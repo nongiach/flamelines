@@ -4,6 +4,9 @@
 
 extern crate env_logger;
 
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// one function example
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #[flamelines::time_lines]
 fn normal_func() -> i32 {
     println!("1");
@@ -17,6 +20,10 @@ fn normal_func() -> i32 {
     42
 }
 
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// one module example, it recursivly hooks all functions of this module
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 #[flamelines::time_lines]
 mod one_module {
     pub fn child_func() -> i32 {
@@ -25,6 +32,10 @@ mod one_module {
         42
     }
 }
+
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// async example : works great with actix !!!
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #[flamelines::time_lines]
 async fn async_parent_func() -> i32 {
@@ -35,6 +46,10 @@ async fn async_parent_func() -> i32 {
 struct ImplDemo {
     name: String,
 }
+
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// example on a impl, it hooks all methods
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #[flamelines::time_lines]
 impl ImplDemo {
