@@ -7,7 +7,9 @@ fn normal_func() -> i32 {
     println!("1");
     println!("2");
     println!("3");
-    println!("4");
+    let mut a = 4;
+    a += 5;
+    println!("4 {}", a);
     child_func();
     println!("5");
     42
