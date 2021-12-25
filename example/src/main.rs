@@ -2,6 +2,8 @@
     static DEPTH: ::std::cell::Cell<usize> = ::std::cell::Cell::new(0);
 }
 
+extern crate env_logger;
+
 #[flamelines::time_lines]
 fn normal_func() -> i32 {
     println!("1");
@@ -49,6 +51,9 @@ impl ImplDemo {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+    std::env::set_var("RUST_LOG", "info");
+
     normal_func();
     async_parent_func().await;
 

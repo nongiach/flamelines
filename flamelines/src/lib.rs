@@ -42,7 +42,7 @@ fn patch_block(block: &mut Vec<Stmt>, _hook_callback: LineCallback, function_nam
             let padding = " >".repeat(padding);
             let elapsed_time = time_before.elapsed().as_millis();
             if elapsed_time > 50 {
-                println!(
+                log::warn!(
                     "{} took {}ms {} in fn {} => {}",
                     " ".repeat(20),
                     elapsed_time,

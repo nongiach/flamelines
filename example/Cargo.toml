@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 flamelines = { path="../flamelines" }
 tokio = { version = "1", features = ["full"] }
+log = "0.4.14"
+env_logger = "0.5.10"
